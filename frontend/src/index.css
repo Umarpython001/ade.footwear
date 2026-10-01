@@ -1,3 +1,70 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        color-scheme: dark;
+        scrollbar-color: theme("colors.seam") theme("colors.ink");
+    }
+
+    body {
+        @apply bg-ink font-sans text-bone antialiased;
+    }
+
+    ::selection {
+        @apply bg-gold text-ink;
+    }
+
+    :focus-visible {
+        @apply outline outline-2 outline-offset-2 outline-gold;
+    }
+
+    h1,
+    h2,
+    h3 {
+        @apply font-display;
+        text-wrap: balance;
+    }
+
+    input,
+    textarea,
+    select {
+        caret-color: theme("colors.gold.DEFAULT");
+    }
+}
+
+@layer components {
+    .wrap {
+        @apply mx-auto w-full max-w-page px-4 sm:px-6 lg:px-10;
+    }
+
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-colors duration-200 ease-out disabled:cursor-not-allowed;
+    }
+
+    .btn-primary {
+        @apply btn bg-gold text-ink hover:bg-gold-deep disabled:bg-seam disabled:text-sand;
+    }
+
+    .btn-ghost {
+        @apply btn border border-seam text-bone hover:border-bone disabled:text-sand disabled:hover:border-seam;
+    }
+
+    .field {
+        @apply w-full rounded-lg border border-seam bg-coal px-4 py-3 text-bone placeholder:text-sand/80 focus-visible:border-gold focus-visible:outline-none;
+    }
+
+    .placeholder-tag {
+        @apply rounded-sm bg-walnut px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide text-gold;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
