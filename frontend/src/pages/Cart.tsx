@@ -3,6 +3,8 @@ import { ArrowRightIcon } from "../components/Icons";
 import { LineThumb } from "../components/LineThumb";
 import { ErrorState, MessageState, PageHeader } from "../components/PageStates";
 import { QuantityStepper } from "../components/QuantityStepper";
+import { Reveal } from "../components/Reveal";
+import { stagger } from "../hooks/useReveal";
 import { useCart } from "../context/Cart";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useProducts } from "../hooks/useResource";
@@ -29,10 +31,10 @@ function CartLines() {
     return (
         <div className="grid gap-10 lg:grid-cols-[1fr_22rem] lg:gap-14">
             <ul className="divide-y divide-seam border-y border-seam">
-                {lines.map(({ item, product, issue, lineTotalKobo }) => {
+                {lines.map(({ item, product, issue, lineTotalKobo }, index) => {
                     const name = product?.name ?? "Unavailable product";
                     return (
-                        <li key={`${item.productId}-${item.size}`} className="flex gap-4 py-6 sm:gap-6">
+                        <Reveal as="li" key={`${item.productId}-${item.size}`} delay={stagger(index)} className="flex gap-4 py-6 sm:gap-6">
                             <LineThumb product={product} />
                             <div className="flex min-w-0 flex-1 flex-col gap-4">
                                 <div className="flex flex-wrap justify-between gap-x-4 gap-y-1">
@@ -87,7 +89,7 @@ function CartLines() {
                                     </button>
                                 </div>
                             </div>
-                        </li>
+                        </Reveal>
                     );
                 })}
             </ul>
