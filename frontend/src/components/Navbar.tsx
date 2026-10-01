@@ -106,7 +106,10 @@ export function Navbar() {
                     >
                         <CartIcon />
                         {cartCount > 0 && (
-                            <span className="absolute right-0.5 top-1 grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1 text-[0.7rem] font-bold text-ink">
+                            <span
+                                key={cartCount}
+                                className="absolute right-0.5 top-1 grid h-5 min-w-5 animate-pop place-items-center rounded-full bg-gold px-1 text-[0.7rem] font-bold text-ink"
+                            >
                                 {cartCount}
                             </span>
                         )}
@@ -128,18 +131,22 @@ export function Navbar() {
                 <nav
                     id="mobile-menu"
                     aria-label="Main"
-                    className="relative border-b border-seam bg-ink px-4 pb-8 pt-2 sm:px-6 lg:hidden"
+                    className="relative h-[calc(100svh-5rem)] overflow-y-auto border-b border-seam bg-ink px-4 pb-8 pt-2 sm:px-6 lg:hidden"
                 >
                     <ul className="flex flex-col">
-                        {LINKS.map((link) => {
+                        {LINKS.map((link, index) => {
                             const active = isActive(link.to, pathname, hash);
                             return (
-                                <li key={link.to} className="border-t border-seam/60 first:border-t-0">
+                                <li
+                                    key={link.to}
+                                    className="animate-menu-in border-t border-seam/60 first:border-t-0"
+                                    style={{ animationDelay: `${index * 45}ms` }}
+                                >
                                     <Link
                                         to={link.to}
                                         onClick={closeMenu}
                                         aria-current={active ? "page" : undefined}
-                                        className={`flex items-center justify-between py-4 font-display text-2xl font-semibold ${
+                                        className={`flex items-center justify-between py-5 font-display text-4xl font-bold tracking-tight ${
                                             active ? "text-gold" : "text-bone"
                                         }`}
                                     >
