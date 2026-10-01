@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { CartIcon } from "../components/Icons";
 import { ErrorState, LoadingBlock, MessageState, PlaceholderNote } from "../components/PageStates";
@@ -15,12 +15,20 @@ function ProductView({ product }: { product: Product }) {
     const [size, setSize] = useState<string | null>(null);
     const [quantity, setQuantity] = useState(1);
     const [added, setAdded] = useState<{ size: string; quantity: number } | null>(null);
+    const [sizeMissing, setSizeMissing] = useState(false);
+    const sizesRef = useRef<HTMLFieldSetElement>(null);
 
     const image = product.images[imageIndex] ?? product.images[0];
     const hasSoldOutSizes = product.sizes.some((s) => !s.available);
 
     function addToCart() {
-        if (!size || !product.available) return;
+        if (!product.available) return;
+        if (!size) {
+            // Keep the button clickable and explain, rather than a silent disabled state.
+            setSizeMissing(true);
+            sizesRef.current?.querySelector<HTMLInputElement>("input:not(:disabled)")?.focus();
+            return;
+        }
         dispatch({ type: "add", productId: product.id, size, quantity });
         setAdded({ size, quantity });
     }
@@ -45,7 +53,7 @@ function ProductView({ product }: { product: Product }) {
 
             <div className="mt-6 grid gap-10 md:grid-cols-2 lg:gap-16">
                 <div>
-                    <div className="aspect-[4/5] overflow-hidden rounded-xl bg-walnut">
+                    <div className="aspect-[4/5] animate-settle overflow-hidden rounded-[2rem] bg-walnut">
                         <img
                             src={image.src}
                             alt={image.alt}
@@ -75,8 +83,8 @@ function ProductView({ product }: { product: Product }) {
                     )}
                 </div>
 
-                <div className="md:pt-2">
-                    <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{product.name}</h1>
+                <div className="md:sticky md:top-28 md:self-start md:pt-2">
+                    <h1 className="display-lg">{product.name}</h1>
                     <p className="mt-3 text-2xl font-semibold text-gold">{formatNaira(product.priceKobo)}</p>
                     <div className="mt-3">
                         <PlaceholderNote>Dummy name, price, sizes and description.</PlaceholderNote>
@@ -85,7 +93,7 @@ function ProductView({ product }: { product: Product }) {
 
                     {product.available ? (
                         <>
-                            <fieldset className="mt-8">
+                            <fieldset ref={sizesRef} className="mt-8">
                                 <legend className="text-sm font-semibold">Size</legend>
                                 <div className="mt-3 flex flex-wrap gap-2">
                                     {product.sizes.map((s) => (
@@ -98,6 +106,7 @@ function ProductView({ product }: { product: Product }) {
                                                 checked={size === s.size}
                                                 onChange={() => {
                                                     setSize(s.size);
+                                                    setSizeMissing(false);
                                                     setAdded(null);
                                                 }}
                                                 className="peer sr-only"
@@ -121,13 +130,19 @@ function ProductView({ product }: { product: Product }) {
                                 <button
                                     type="button"
                                     onClick={addToCart}
-                                    disabled={!size}
                                     className="btn-primary flex-1 sm:min-w-[14rem] sm:flex-none"
                                 >
                                     <CartIcon width={18} height={18} /> Add to cart
                                 </button>
                             </div>
-                            {!size && <p className="mt-3 text-sm text-sand">Choose a size to add this pair to your cart.</p>}
+                            {!size &&
+                                (sizeMissing ? (
+                                    <p role="alert" className="mt-3 animate-rise text-sm font-semibold text-gold">
+                                        Choose a size first, then add to cart.
+                                    </p>
+                                ) : (
+                                    <p className="mt-3 text-sm text-sand">Choose a size to add this pair to your cart.</p>
+                                ))}
                         </>
                     ) : (
                         <div className="mt-8 rounded-xl border border-seam bg-coal p-5">
@@ -149,7 +164,7 @@ function ProductView({ product }: { product: Product }) {
 
                     <div aria-live="polite" className="mt-4 min-h-6">
                         {added && (
-                            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                            <p key={`${added.size}-${added.quantity}`} className="flex animate-rise flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                                 <span>
                                     Added {added.quantity} × size {added.size} to your cart.
                                 </span>
