@@ -1,13 +1,14 @@
 import { Link } from "react-router";
 import { formatNaira } from "../lib/format";
+import { ArrowRightIcon } from "./Icons";
 import type { Product } from "../types/product";
 
 export function ProductCard({ product, eager = false }: { product: Product; eager?: boolean }) {
     const image = product.images[0];
 
     return (
-        <Link to={`/products/${product.slug}`} className="group block rounded-lg">
-            <div className="relative aspect-[4/5] overflow-hidden rounded-lg bg-walnut">
+        <Link to={`/products/${product.slug}`} className="group block rounded-[1.25rem]">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-[1.25rem] bg-walnut">
                 <img
                     src={image.src}
                     alt={image.alt}
@@ -18,13 +19,19 @@ export function ProductCard({ product, eager = false }: { product: Product; eage
                         product.available ? "" : "grayscale-[60%]"
                     }`}
                 />
+                <span
+                    aria-hidden="true"
+                    className="absolute bottom-3 right-3 grid h-11 w-11 translate-y-2 place-items-center rounded-full bg-bone text-ink opacity-0 transition duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100 group-focus-visible:translate-y-0 group-focus-visible:opacity-100"
+                >
+                    <ArrowRightIcon />
+                </span>
                 {!product.available && (
                     <span className="absolute left-3 top-3 rounded-full bg-ink/90 px-3 py-1 text-xs font-semibold text-bone">
                         Sold out
                     </span>
                 )}
             </div>
-            <div className="mt-3 flex items-start justify-between gap-3">
+            <div className="mt-4 flex items-start justify-between gap-3">
                 <div>
                     <h3 className="font-display text-base font-semibold leading-snug transition-colors group-hover:text-gold sm:text-lg">
                         {product.name}
