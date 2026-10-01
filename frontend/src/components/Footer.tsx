@@ -83,6 +83,13 @@ export function Footer() {
                     </p>
                 </div>
             </div>
+            <p
+                aria-hidden="true"
+                className="wrap select-none whitespace-nowrap pb-8 font-display font-extrabold leading-none tracking-[-0.04em] text-bark"
+                style={{ fontSize: "clamp(3rem, 10.5vw, 6rem)" }}
+            >
+                Ade Foot Wear
+            </p>
             <div className="border-t border-seam">
                 <p className="mx-auto max-w-page px-4 py-6 text-xs text-sand sm:px-6 lg:px-10">
                     © {new Date().getFullYear()} Ade Foot Wear
