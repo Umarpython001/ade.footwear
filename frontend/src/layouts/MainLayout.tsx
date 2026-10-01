@@ -17,7 +17,10 @@ export function MainLayout() {
             </a>
             <Navbar />
             <main id="main" tabIndex={-1} className={isHome ? "outline-none" : "pb-24 pt-28 outline-none sm:pt-32"}>
-                <Outlet />
+                {/* Keyed by path so each route arrives with a short fade-up. */}
+                <div key={pathname} className="animate-page-in">
+                    <Outlet />
+                </div>
             </main>
             <Footer />
             <ScrollRestoration />
