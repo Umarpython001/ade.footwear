@@ -1,5 +1,6 @@
 import type { InputHTMLAttributes } from "react";
 import { Link } from "react-router";
+import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { ArrowRightIcon } from "../components/Icons";
 import { LineThumb } from "../components/LineThumb";
 import { ErrorState, LoadingBlock, MessageState, PageHeader } from "../components/PageStates";
@@ -58,13 +59,9 @@ function CheckoutForm() {
     return (
         <div className="grid gap-10 lg:grid-cols-[1fr_24rem] lg:gap-14">
             <form onSubmit={(event) => event.preventDefault()} aria-describedby="checkout-status" className="space-y-10">
-                <div id="checkout-status" className="rounded-xl border border-gold/40 bg-walnut/40 p-5">
-                    <p className="font-semibold">Ordering opens soon</p>
-                    <p className="mt-1 text-sm leading-relaxed text-sand">
-                        Sending an order needs sign-in, which isn't ready yet. You can fill in your details to preview
-                        checkout. Nothing is sent, and your cart stays saved on this device.
-                    </p>
-                </div>
+                <p id="checkout-status" className="text-sm leading-relaxed text-sand">
+                    Fill in your details, then sign in to send your order request. Your cart stays saved on this device.
+                </p>
 
                 <fieldset>
                     <legend className="font-display text-2xl font-semibold">Your details</legend>
@@ -107,11 +104,13 @@ function CheckoutForm() {
                     <span className="text-sm leading-relaxed">I confirm these details are correct.</span>
                 </label>
 
-                <div>
-                    <button type="submit" disabled className="btn-primary w-full sm:w-auto">
-                        Send order request
-                    </button>
-                    <p className="mt-3 text-sm text-sand">Available once sign-in is ready. No payment is taken on this website.</p>
+                <div className="rounded-[1.5rem] border border-seam bg-coal p-6">
+                    <p className="font-display text-xl font-semibold">Sign in to send your order</p>
+                    <p className="mt-1 text-sm leading-relaxed text-sand">
+                        We use your Google account to save your order and show it under Your orders. No payment is taken on
+                        this website.
+                    </p>
+                    <GoogleSignInButton className="mt-5" />
                 </div>
             </form>
 
