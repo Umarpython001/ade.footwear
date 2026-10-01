@@ -6,6 +6,7 @@
     html {
         color-scheme: dark;
         scrollbar-color: theme("colors.seam") theme("colors.ink");
+        -webkit-tap-highlight-color: transparent;
     }
 
     body {
@@ -17,7 +18,7 @@
     }
 
     :focus-visible {
-        @apply outline outline-2 outline-offset-2 outline-gold;
+        @apply outline outline-2 outline-offset-4 outline-gold;
     }
 
     h1,
@@ -27,10 +28,19 @@
         text-wrap: balance;
     }
 
+    p {
+        text-wrap: pretty;
+    }
+
     input,
     textarea,
     select {
         caret-color: theme("colors.gold.DEFAULT");
+    }
+
+    a {
+        text-underline-offset: 0.3em;
+        text-decoration-thickness: 1px;
     }
 }
 
@@ -40,7 +50,7 @@
     }
 
     .btn {
-        @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold transition-colors duration-200 ease-out disabled:cursor-not-allowed;
+        @apply relative inline-flex select-none items-center justify-center gap-2.5 rounded-full px-7 py-3.5 text-[0.95rem] font-semibold transition-[background-color,border-color,color,transform] duration-200 ease-out active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100;
     }
 
     .btn-primary {
@@ -48,15 +58,72 @@
     }
 
     .btn-ghost {
-        @apply btn border border-seam text-bone hover:border-bone disabled:text-sand disabled:hover:border-seam;
+        @apply btn border border-bone/25 text-bone hover:border-bone disabled:text-sand disabled:hover:border-seam;
+    }
+
+    /* Trailing arrows step forward on hover: feedback that the control goes somewhere. */
+    .btn svg:last-child,
+    .link-arrow svg:last-child {
+        @apply transition-transform duration-300 ease-out;
+    }
+
+    .btn:hover svg:last-child,
+    .link-arrow:hover svg:last-child,
+    .group:hover .link-arrow svg:last-child {
+        transform: translateX(0.25rem);
+    }
+
+    .link-arrow {
+        @apply inline-flex items-center gap-2 border-b border-gold pb-1 text-sm font-semibold text-bone transition-colors hover:text-gold;
     }
 
     .field {
-        @apply w-full rounded-lg border border-seam bg-coal px-4 py-3 text-bone placeholder:text-sand/80 focus-visible:border-gold focus-visible:outline-none;
+        @apply w-full rounded-xl border border-seam bg-coal px-4 py-3.5 text-bone transition-colors placeholder:text-sand/70 hover:border-bone/30 focus-visible:border-gold focus-visible:outline-none;
     }
 
     .placeholder-tag {
-        @apply rounded-sm bg-walnut px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-wide text-gold;
+        @apply inline-block rounded-sm bg-walnut px-1.5 py-0.5 text-[0.68rem] font-semibold uppercase leading-normal tracking-wide text-gold;
+    }
+
+    .display-xl {
+        @apply font-display font-extrabold leading-[0.92] tracking-[-0.035em];
+        font-size: clamp(3rem, 7.2vw, 6rem);
+    }
+
+    .display-lg {
+        @apply font-display font-bold leading-[0.98] tracking-[-0.03em];
+        font-size: clamp(2.25rem, 4.6vw, 4rem);
+    }
+
+    /* Scroll reveal (driven by components/Reveal). Visible by default; only
+       hidden once JS has confirmed motion is allowed. */
+    .reveal[data-reveal="pending"] {
+        opacity: 0;
+        transform: translate3d(0, 1.75rem, 0);
+    }
+
+    .reveal {
+        transition:
+            opacity 700ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms),
+            transform 700ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
+    }
+
+    .reveal-zoom img {
+        transition: transform 1100ms cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
+    }
+
+    .reveal-zoom[data-reveal="pending"] img {
+        transform: scale(1.12);
+    }
+}
+
+/* Used from inline styles (hero progress), so declared outside Tailwind. */
+@keyframes progress {
+    from {
+        transform: scaleX(0);
+    }
+    to {
+        transform: scaleX(1);
     }
 }
 
@@ -65,6 +132,8 @@
     *::before,
     *::after {
         animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }
