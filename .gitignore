@@ -5,6 +5,7 @@ __pycache__/
 venv/
 .env
 *.db
+db.password
 
 # Node.js / React
 node_modules/
