@@ -1,6 +1,8 @@
 import { Link, useSearchParams } from "react-router";
 import { ErrorState, MessageState, PageHeader, PlaceholderNote, ProductGridSkeleton } from "../components/PageStates";
 import { ProductCard } from "../components/ProductCard";
+import { Reveal } from "../components/Reveal";
+import { stagger } from "../hooks/useReveal";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useProducts } from "../hooks/useResource";
 import type { Category } from "../types/product";
@@ -75,11 +77,11 @@ export function ShopPage() {
                                 New pairs are added often. Check back soon or browse the full collection.
                             </MessageState>
                         ) : (
-                            <ul className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+                            <ul key={category ?? "all"} className="grid grid-cols-2 gap-x-4 gap-y-12 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
                                 {visible.map((product, index) => (
-                                    <li key={product.id}>
+                                    <Reveal as="li" key={product.id} delay={stagger(index)}>
                                         <ProductCard product={product} eager={index < 4} />
-                                    </li>
+                                    </Reveal>
                                 ))}
                             </ul>
                         )}
