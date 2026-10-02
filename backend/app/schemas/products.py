@@ -9,15 +9,15 @@ class products(Base):
     __tablename__ = 'products'
 
     id = Column(String, primary_key=True)
-    slug = Column(String, unique=True, nullable=False, index=True)
+    slug = Column(String, unique=True, nullable=False, index=True) # Used in URLs: /products/woven-buckle-derby
     name = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     category = Column(String, nullable=False, index=True)
     price_kobo = Column(Integer, nullable=False)
     images = Column(JSON, nullable=True)  # Stores list of { src, alt, focus }
     sizes = Column(JSON, nullable=True)   # Stores list of { size, available }
-    active = Column(Boolean, default=False, nullable=False)
-    featured = Column(Boolean, default=False, nullable=False)
+    active = Column(Boolean, default=False, nullable=False) # False = hidden and cannot be ordered
+    featured = Column(Boolean, default=False, nullable=False) # Shown on the homepage
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
