@@ -3,9 +3,6 @@ from sqlalchemy.sql import func
 from ..core.database import Base
 import uuid
 
-
-
-
 class orders(Base):
     __tablename__ = 'orders'
 
