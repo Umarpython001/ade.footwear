@@ -41,9 +41,14 @@ until it passes.
        empty — Vercel finds `api/index.py` itself.
 4. - [ ] **Deploy** once (it will fail or return 500s without env vars — that
        is expected), then set the Python version and env vars below.
-5. - [ ] **Python version**: backend project → Settings → Python Version →
-       pick **3.12** (3.14 is not offered; our packages all support 3.12).
-       `runtime.txt` does nothing on Vercel, so there is none in this repo.
+5. - [ ] **Python version: 3.12**, set two ways (belt and suspenders):
+       - In code: `backend/.python-version` already contains `3.12`, which
+         Vercel reads at build time.
+       - In the dashboard: backend project → Settings → Python Version →
+         pick **3.12** (3.14 is not offered; our packages all support 3.12).
+       If the two ever disagree, the dashboard wins — so make sure both say 3.12.
+       (`runtime.txt` is a Render/Heroku convention and does nothing on Vercel,
+       which is why this repo doesn't have one.)
 6. - [ ] **Environment Variables** (backend project → Settings → Environment
        Variables), copied from `backend/.env`. Tick **Production, Preview AND
        Development** for each:
