@@ -64,6 +64,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // _event: the event name (unused -- session presence is what we branch on).
             // session: the session object, or null when signed out.
         } = supabase.auth.onAuthStateChange((_event, session) => {
+            // If Supabase just handed us tokens in the URL, wipe them from the address bar.
+            if (window.location.hash.includes("access_token")) {
+                window.history.replaceState(null, "", window.location.pathname);
+            }
+
             // session?.user exists: someone is signed in.
             if (session?.user) {
                 // Publish the signed-in state with the identity the UI needs.
