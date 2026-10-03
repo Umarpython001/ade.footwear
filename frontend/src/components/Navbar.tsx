@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
 import logo from "../assets/logo.png";
 import { useCart } from "../context/Cart";
+import { useAuth } from "../context/Auth";
+import { signOut } from "../services/auth";
 import { useScrolled } from "../hooks/useScrolled";
 import { CartIcon, CloseIcon, MenuIcon, UserIcon } from "./Icons";
 
@@ -26,6 +28,7 @@ export function Navbar() {
     const scrolled = useScrolled();
     const [menuOpen, setMenuOpen] = useState(false);
     const { items } = useCart();
+    const auth = useAuth();
     const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
     // Transparent only while resting over the homepage hero.
@@ -90,6 +93,15 @@ export function Navbar() {
                 </nav>
 
                 <div className="flex items-center gap-1">
+                    {auth.status === "signed-in" && (
+                        <button
+                            type="button"
+                            onClick={() => void signOut()}
+                            className="rounded-full px-3 py-2 text-sm text-bone/85 transition-colors hover:text-bone"
+                        >
+                            Sign out
+                        </button>
+                    )}
                     <Link
                         to="/orders"
                         onClick={closeMenu}
@@ -155,6 +167,20 @@ export function Navbar() {
                                 </li>
                             );
                         })}
+                        {auth.status === "signed-in" && (
+                            <li className="border-t border-seam/60">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        closeMenu();
+                                        void signOut();
+                                    }}
+                                    className="py-5 font-display text-4xl font-bold tracking-tight text-bone/85"
+                                >
+                                    Sign out
+                                </button>
+                            </li>
+                        )}
                     </ul>
                 </nav>
             )}

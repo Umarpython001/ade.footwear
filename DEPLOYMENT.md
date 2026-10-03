@@ -58,7 +58,7 @@ until it passes.
        | `SUPABASE_URL` | same as `.env` |
        | `PUBLISHABLE_KEY` | same as `.env` |
        | `DIRECT_CONNECTION_STRING` | same as `.env` |
-       | `ALLOWED_ORIGINS` | `http://localhost:5173,https://ade-footwear-v2n7.vercel.app` |
+       | `ALLOWED_ORIGINS` | `http://localhost:5173,https://ade-footwear.vercel.app` |
 
 7. - [ ] Deployments → ⋯ on the latest → **Redeploy** (env changes only apply
        on a fresh build).
@@ -93,7 +93,7 @@ works on the real URL too.
        - **Site URL:** leave as is (local development uses it).
        - **Redirect URLs:** make sure BOTH entries exist (add any missing one):
          - `http://localhost:5173/**`
-         - `https://ade-footwear-v2n7.vercel.app/**`
+         - `https://ade-footwear.vercel.app/**`
        - Save. (A returning Google login whose page is not on this list loses
          its session — this is the classic "comes back but still signed out".)
 2. - [ ] **Authentication → Providers → Google** is already enabled with your
@@ -133,7 +133,7 @@ this the live shop is empty and its sign-in button reports "not connected".
 
 ### ✅ Check it worked
 
-- [ ] `https://ade-footwear-v2n7.vercel.app` shop page shows the 4 ADE products
+- [ ] `https://ade-footwear.vercel.app` shop page shows the 4 ADE products
 - [ ] Clicking a product opens its details page with the photo
 - [ ] Dev tools → Network shows calls to your backend domain, status 200
 - [ ] No CORS errors in Dev tools → Console
@@ -149,7 +149,7 @@ update it in the **backend** project's env vars and redeploy the backend.
 This proves the whole chain — live frontend → live backend → Supabase Auth →
 Supabase database — before any customer touches it.
 
-1. - [ ] Open `https://ade-footwear-v2n7.vercel.app/orders` → **Continue with
+1. - [ ] Open `https://ade-footwear.vercel.app/orders` → **Continue with
        Google** → pick your account → you land back on the **homepage** (the
        rule: plain sign-ins return to featured products).
 2. - [ ] Add a pair to the cart → `/checkout` → fill the form → send the order
