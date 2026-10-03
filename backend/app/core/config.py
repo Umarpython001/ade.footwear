@@ -18,7 +18,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
 
     # Frontend URLs allowed to call this API from a browser (CORS),
-    # comma-separated: "http://localhost:5173,https://ade.vercel.app".
+    # comma-separated. The deployed frontend's URL belongs in .env, e.g.
+    # ALLOWED_ORIGINS=http://localhost:5173,https://<your-vercel-site>
+    # An .env value REPLACES this default entirely (no merging), so it must
+    # also include http://localhost:5173 or local development breaks.
     allowed_origins: str = "http://localhost:5173"
 
     # Filled in at step 2 (Supabase) and step 6 (Mailgun) of BACKEND_PLAN.md.
