@@ -118,9 +118,10 @@ site too (shared database).
 
 ## Part 4 — Known limitations (expected, not bugs)
 
-- **Checkout and Orders pages don't work yet** — they need Google sign-in,
-  which isn't built. `POST /orders` correctly answers 401 without a token.
-- **No order emails** — Mailgun was dropped from scope.
+- **No order emails** — Mailgun was dropped from scope. `email_sent_at` stays null.
+- **No online payment** — by design: the shop takes order *requests*; Ade Foot Wear
+  confirms delivery and payment directly. This is the only piece left for a
+  future payment step.
 - **Catalogue is placeholder** — names/prices/descriptions in
   `frontend/src/data/products.ts` and the seed are invented; the owner must
-  approve real ones before launch.
+  approve real ones before launch (re-run `seed_products.py` afterwards).
