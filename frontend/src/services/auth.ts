@@ -14,10 +14,11 @@ export async function signInWithGoogle(): Promise<SignInResult> {
     }
 
     // On success the browser navigates away to Google, so callers almost
-    // always see only the error path of this promise.
+    // always see only the error path of this promise. redirectTo strips any
+    // query params/hash so stale error parameters never ride along.
     const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.href },
+        options: { redirectTo: window.location.origin + window.location.pathname },
     });
 
     if (error) {
