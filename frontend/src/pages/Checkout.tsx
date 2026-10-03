@@ -4,12 +4,14 @@ import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { ArrowRightIcon } from "../components/Icons";
 import { LineThumb } from "../components/LineThumb";
 import { ErrorState, LoadingBlock, MessageState, PageHeader } from "../components/PageStates";
+// I added: read the session state so the sign-in card can show "Signed in" vs the button.
 import { useAuth } from "../context/Auth";
 import { useCart } from "../context/Cart";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useProducts } from "../hooks/useResource";
 import { resolveCartLines } from "../lib/cart";
 import { formatNaira } from "../lib/format";
+// I added: signOut for the "Sign out" button in the signed-in card below.
 import { signOut } from "../services/auth";
 
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -37,6 +39,7 @@ function Field({ id, label, hint, className = "", ...inputProps }: FieldProps) {
 function CheckoutForm() {
     const { items } = useCart();
     const products = useProducts();
+    // I added: subscribe to the auth session for the sign-in card at the bottom of the form.
     const auth = useAuth();
 
     if (products.status === "loading") return <LoadingBlock label="Loading your order" />;
@@ -108,6 +111,7 @@ function CheckoutForm() {
                 </label>
 
                 <div className="rounded-[1.5rem] border border-seam bg-coal p-6">
+                    {/* I added: signed-in customers see their identity + sign-out; everyone else sees the button. */}
                     {auth.status === "signed-in" ? (
                         <>
                             <p className="font-display text-xl font-semibold">Signed in</p>
@@ -117,6 +121,7 @@ function CheckoutForm() {
                             </p>
                             <button
                                 type="button"
+                                // I added: sign out on click; `void` discards the promise for the void-returning handler.
                                 onClick={() => void signOut()}
                                 className="mt-3 text-sm font-semibold text-gold underline underline-offset-4"
                             >

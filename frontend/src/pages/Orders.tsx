@@ -3,9 +3,11 @@ import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { ArrowRightIcon } from "../components/Icons";
 import { PageHeader } from "../components/PageStates";
 import { Reveal } from "../components/Reveal";
+// I added: read the session state so this page can show "signed in" vs the sign-in prompt.
 import { useAuth } from "../context/Auth";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { stagger } from "../hooks/useReveal";
+// I added: signOut for the "Sign out" button in the signed-in branch below.
 import { signOut } from "../services/auth";
 
 const WHAT_YOU_SEE = [
@@ -16,6 +18,7 @@ const WHAT_YOU_SEE = [
 
 export function OrdersPage() {
     useDocumentTitle("Your orders");
+    // I added: subscribe to the auth session (loading/signed-out/signed-in).
     const auth = useAuth();
 
     return (
@@ -24,6 +27,7 @@ export function OrdersPage() {
 
             <div className="mt-12 grid gap-6 lg:grid-cols-[1.1fr_1fr]">
                 <Reveal className="rounded-[2rem] border border-seam bg-coal p-8 sm:p-12">
+                    {/* I added: when signed in, show identity + sign-out instead of the sign-in prompt. */}
                     {auth.status === "signed-in" ? (
                         <>
                             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">You're signed in</h2>
@@ -36,6 +40,7 @@ export function OrdersPage() {
                             </p>
                             <button
                                 type="button"
+                                // I added: sign out on click; `void` discards the promise for the void-returning handler.
                                 onClick={() => void signOut()}
                                 className="mt-6 text-sm font-semibold text-gold underline underline-offset-4"
                             >
