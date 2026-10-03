@@ -4,14 +4,23 @@ import { GoogleIcon, SpinnerIcon } from "./Icons";
 
 // Follows Google's light sign-in button styling (white fill, #1f1f1f text,
 // #747775 outline) so the brand mark sits on its approved ground.
-export function GoogleSignInButton({ className = "", fullWidth = false }: { className?: string; fullWidth?: boolean }) {
+// returnTo: where Supabase sends the customer after Google (default "/" = featured homepage).
+export function GoogleSignInButton({
+    className = "",
+    fullWidth = false,
+    returnTo = "/",
+}: {
+    className?: string;
+    fullWidth?: boolean;
+    returnTo?: string;
+}) {
     const [pending, setPending] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
 
     async function handleClick() {
         setPending(true);
         setMessage(null);
-        const result = await signInWithGoogle();
+        const result = await signInWithGoogle(returnTo);
         setPending(false);
         if (!result.ok) setMessage(result.message);
     }

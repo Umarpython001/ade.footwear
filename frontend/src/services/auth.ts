@@ -13,10 +13,12 @@ export type SignInResult = { ok: true } | { ok: false; message: string };
 const NOT_CONFIGURED =
     "Google sign-in isn't connected yet. It will work as soon as the Supabase backend is set up.";
 
-// Define signInWithGoogle: start the Google OAuth flow. Almost always navigates away on success.
-// -> Promise<SignInResult>: {ok:true} when the redirect started (or a previous session exists)...
+// Define signInWithGoogle: start the Google OAuth flow, then land on returnTo.
+// returnTo: path to send the customer back to after Google (default "/" = featured homepage).
+//   The checkout passes "/checkout" so its pending order auto-sends on return.
+// -> Promise<SignInResult>: {ok:true} when the redirect started...
 // ...{ok:false, message} when Supabase is missing or Google returned an error.
-export async function signInWithGoogle(): Promise<SignInResult> {
+export async function signInWithGoogle(returnTo: string = "/"): Promise<SignInResult> {
     // Guard: without a client there is nothing to call -- return the friendly message.
     if (!isSupabaseConfigured || !supabase) {
         return { ok: false, message: NOT_CONFIGURED };
@@ -25,12 +27,12 @@ export async function signInWithGoogle(): Promise<SignInResult> {
     // Comment: on success the browser navigates away to Google, so callers almost
     // Comment: always see only the error path of this promise. redirectTo strips any
     // Comment: query params/hash so stale error parameters never ride along. -- I fixed this after your retry URL kept old error params.
-    // Start OAuth: Supabase redirects to Google, then back to redirectTo with a fresh session.
+    // Start OAuth: Supabase redirects to Google, then back to origin + returnTo with a fresh session.
     const { error } = await supabase.auth.signInWithOAuth({
         // provider: "google" selects Google OAuth (enabled in the Supabase dashboard).
         provider: "google",
-        // redirectTo: clean return address (origin + path only, no ?query or #hash).
-        options: { redirectTo: window.location.origin + window.location.pathname },
+        // redirectTo: origin + the requested return path (must be allow-listed in Supabase redirect URLs).
+        options: { redirectTo: window.location.origin + returnTo },
     });
 
     // Supabase reports immediate failures (popup blocked, provider disabled) via error.

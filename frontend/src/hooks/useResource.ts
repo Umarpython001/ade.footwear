@@ -11,7 +11,8 @@ type Settled<T> = { key: string; attempt: number } & ({ ok: true; data: T } | { 
 
 // Loads async data for a key. The result is tied to the key and attempt it
 // was fetched for, so a changed key reads as loading instead of stale data.
-function useResource<T>(key: string, fetcher: (key: string) => Promise<T>): Resource<T> {
+// Exported for one-off fetches like the order confirmation page (useProducts/useProduct cover the catalogue).
+export function useResource<T>(key: string, fetcher: (key: string) => Promise<T>): Resource<T> {
     const [attempt, setAttempt] = useState(0);
     const [settled, setSettled] = useState<Settled<T> | null>(null);
 
