@@ -194,8 +194,27 @@ npm run dev
 
 ### Ship changes
 
-- `git push` → both Vercel projects rebuild automatically. Re-run the Part 4
-  checks after any change that touches checkout, auth, or CORS.
+### Ship changes
+
+- **Default Vercel behavior: every `git push` to `main` rebuilds AND deploys
+  both projects to production automatically.** There is no staging step unless
+  you set one up — read the workflow below before pushing casually.
+- **Recommended workflow (keeps production safe):**
+  ```bat
+  git checkout -b my-change        :: work here, push the branch freely
+  git push -u origin my-change
+  ```
+  Pushing a branch (or opening a pull request) builds a **Preview** deployment
+  with its own URL — test there. Merging the PR into `main` is what ships to
+  production. `main` should always be in a state you are happy for customers
+  to see.
+- **Alternative (manual control):** backend/frontend project → Settings →
+  Git → turn off automatic deployments (the exact toggle name varies by
+  dashboard version; look for auto-deploy / ignored-build-step options).
+  With that off, nothing ships until you press **Redeploy** or call a Deploy
+  Hook. Useful during demo week, but easy to forget you turned it off.
+- After any change touching checkout, auth, or CORS, re-run the Part 4 checks
+  on the affected URL (preview or production).
 
 ### Re-seed the products
 
