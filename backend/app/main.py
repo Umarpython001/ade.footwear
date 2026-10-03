@@ -10,6 +10,39 @@ Then open http://localhost:8000/docs for interactive API docs.
 from fastapi import FastAPI
 # Import CORSMiddleware: browser security gate; only listed origins may call the API from a page.
 from fastapi.middleware.cors import CORSMiddleware
+# Import BaseHTTPMiddleware: lets us inspect every request before routing (temporary diagnostic).
+from starlette.middleware.base import BaseHTTPMiddleware
+# Import logging: WARNING logs are captured in Vercel Function Logs.
+import logging
+
+# TEMPORARY diagnostic for the Vercel rewrite issue -- remove once routing is fixed.
+# Logs the exact path + headers the function receives, so we can restore the original URL.
+# Sensitive headers are redacted, so these logs are safe to paste anywhere.
+_diag_log = logging.getLogger("ade.diag")
+_REDACT_HEADERS = {"authorization", "cookie", "x-api-key"}
+
+
+class VercelPathDiagMiddleware(BaseHTTPMiddleware):
+    # dispatch: runs before FastAPI routing; logs the raw ASGI scope, then continues normally.
+    async def dispatch(self, request, call_next):
+        # scope: the raw ASGI connection info (path, headers, query) as Vercel built it.
+        scope = request.scope
+        # Build a safe header dict: names + values, with secrets replaced by "<redacted>".
+        shown = {
+            k.decode().lower(): ("<redacted>" if k.decode().lower() in _REDACT_HEADERS else v.decode(errors="replace"))
+            for k, v in scope.get("headers", [])
+        }
+        # One compact line per request: the path FastAPI will try to route + how it got here.
+        _diag_log.warning(
+            "DIAG path=%s raw_path=%s root_path=%s query=%s headers=%s",
+            scope.get("path"),
+            scope.get("raw_path"),
+            scope.get("root_path", ""),
+            scope.get("query_string", b"").decode(),
+            shown,
+        )
+        # Continue to normal routing (still 404s until the real fix lands).
+        return await call_next(request)
 
 # Import api_router: the single collector that bundles every endpoint group (health, products, orders).
 from app.api.routes import api_router
@@ -53,3 +86,7 @@ app.add_middleware(
 
 # Mount every endpoint group (health, products, orders) onto the app.
 app.include_router(api_router)
+
+# TEMPORARY: register the diagnostic middleware (runs on every request until the rewrite fix lands).
+# add_middleware wraps outside-in, so this runs before routing and logs what Vercel actually sent.
+app.add_middleware(VercelPathDiagMiddleware)
