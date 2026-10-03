@@ -4,11 +4,13 @@ import { GoogleSignInButton } from "../components/GoogleSignInButton";
 import { ArrowRightIcon } from "../components/Icons";
 import { LineThumb } from "../components/LineThumb";
 import { ErrorState, LoadingBlock, MessageState, PageHeader } from "../components/PageStates";
+import { useAuth } from "../context/Auth";
 import { useCart } from "../context/Cart";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { useProducts } from "../hooks/useResource";
 import { resolveCartLines } from "../lib/cart";
 import { formatNaira } from "../lib/format";
+import { signOut } from "../services/auth";
 
 interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
     id: string;
@@ -35,6 +37,7 @@ function Field({ id, label, hint, className = "", ...inputProps }: FieldProps) {
 function CheckoutForm() {
     const { items } = useCart();
     const products = useProducts();
+    const auth = useAuth();
 
     if (products.status === "loading") return <LoadingBlock label="Loading your order" />;
     if (products.status === "error") return <ErrorState onRetry={products.retry} />;
@@ -105,12 +108,31 @@ function CheckoutForm() {
                 </label>
 
                 <div className="rounded-[1.5rem] border border-seam bg-coal p-6">
-                    <p className="font-display text-xl font-semibold">Sign in to send your order</p>
-                    <p className="mt-1 text-sm leading-relaxed text-sand">
-                        We use your Google account to save your order and show it under Your orders. No payment is taken on
-                        this website.
-                    </p>
-                    <GoogleSignInButton className="mt-5" />
+                    {auth.status === "signed-in" ? (
+                        <>
+                            <p className="font-display text-xl font-semibold">Signed in</p>
+                            <p className="mt-1 text-sm leading-relaxed text-sand">
+                                {auth.user.name} · {auth.user.email}. Your order request will be sent under this account
+                                once the checkout is connected to the backend (the next step).
+                            </p>
+                            <button
+                                type="button"
+                                onClick={() => void signOut()}
+                                className="mt-3 text-sm font-semibold text-gold underline underline-offset-4"
+                            >
+                                Sign out
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <p className="font-display text-xl font-semibold">Sign in to send your order</p>
+                            <p className="mt-1 text-sm leading-relaxed text-sand">
+                                We use your Google account to save your order and show it under Your orders. No payment
+                                is taken on this website.
+                            </p>
+                            <GoogleSignInButton className="mt-5" />
+                        </>
+                    )}
                 </div>
             </form>
 
