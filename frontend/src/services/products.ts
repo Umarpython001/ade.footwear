@@ -1,20 +1,59 @@
-import { products } from "../data/products";
-import type { Product } from "../types/product";
+import { isAxiosError } from "axios";
+import { api } from "../lib/api";
+import type { Category, Product, ProductImage, ProductSize } from "../types/product";
 
-// Stand-in for the FastAPI endpoints GET /products and GET /products/{slug}.
-// Only this file changes when the backend is ready; callers already treat
-// product data as async.
+// Talks to the FastAPI backend: GET /products and GET /products/{slug}.
+// Callers already treat product data as async, so nothing else changes.
 
-const NETWORK_DELAY_MS = 350;
+// The backend's ProductOut shape (camelCase, no internal columns).
+type ApiProduct = {
+    id: string;
+    slug: string;
+    name: string;
+    description: string | null;
+    category: string;
+    priceKobo: number;
+    images: ProductImage[];
+    sizes: ProductSize[];
+    featured: boolean;
+};
 
-const delay = () => new Promise((resolve) => setTimeout(resolve, NETWORK_DELAY_MS));
+type ApiProductPage = {
+    skip: number;
+    limit: number;
+    data: ApiProduct[];
+};
+
+function toProduct(apiProduct: ApiProduct): Product {
+    return {
+        ...apiProduct,
+        description: apiProduct.description ?? "",
+        // The backend only serves active products, so a product is "available"
+        // in the UI as long as at least one size can be ordered. A fully
+        // sold-out product greys out, matching the old dummy-data behaviour.
+        available: apiProduct.sizes.some((size) => size.available),
+        // Valid once the catalogue holds real ADE data ("Shoes" | "Sandals" |
+        // "Slippers"); the current placeholder seed uses other strings.
+        category: apiProduct.category as Category,
+    };
+}
 
 export async function getProducts(): Promise<Product[]> {
-    await delay();
-    return products;
+    const { data } = await api.get<ApiProductPage>("/products/", {
+        params: { limit: 100 },
+    });
+    return data.data.map(toProduct);
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-    await delay();
-    return products.find((product) => product.slug === slug) ?? null;
+    try {
+        const { data } = await api.get<ApiProduct>(`/products/${slug}`);
+        return toProduct(data);
+    } catch (error) {
+        // A missing product is a normal answer, not a failure.
+        if (isAxiosError(error) && error.response?.status === 404) {
+            return null;
+        }
+        throw error;
+    }
 }
