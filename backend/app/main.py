@@ -27,6 +27,8 @@ from app.core.database import Base  # noqa: E402 -- same module, second name, ow
 from app.schemas import orders  # noqa: F401 -- F401 = "imported but unused" is expected here.
 # Import products: registers the products table on Base.metadata the same way.
 from app.schemas import products  # noqa: F401 -- second table module, own comment line.
+# Import cart: registers the cart_items table on Base.metadata the same way.
+from app.schemas import cart  # noqa: F401 -- third table module, own comment line.
 
 # Create any missing tables on startup (no-op when they already exist); runs once at import.
 Base.metadata.create_all(bind=engine)
@@ -45,8 +47,9 @@ app.add_middleware(
     # allow_origins: exact origins allowed (from ALLOWED_ORIGINS in .env); others get no ACAO header.
     # (I changed this line back from allow_origins=["*"] so the CORS tests pass.)
     allow_origins=settings.cors_origins,
-    # allow_methods: browsers may use GET (reading) and POST (checkout) cross-origin; nothing else.
-    allow_methods=["GET", "POST"],
+    # allow_methods: browsers may use GET (reading), POST (checkout), PUT (cart sync)
+    # and DELETE (cart clear) cross-origin; nothing else.
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     # allow_headers: the custom headers browsers may send: auth token, JSON type, idempotency key.
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
 )
