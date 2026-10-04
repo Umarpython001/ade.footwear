@@ -1,10 +1,9 @@
 import { createContext, useContext, useEffect, useReducer, useRef, useState } from "react";
 import type { Dispatch, ReactNode } from "react";
-import { isAxiosError } from "axios";
 
 // Import useAuth: session state; syncing only runs while signed in.
 import { useAuth } from "./Auth";
-// Import fetchRemoteCart: GET /cart (pull on sign-in).
+// Import fetchRemoteCart: GET /cart (pull on sign-in, refetch on focus).
 import { fetchRemoteCart } from "../services/cart";
 // Import replaceRemoteCart: PUT /cart (push local changes + upload the guest cart).
 import { replaceRemoteCart } from "../services/cart";
@@ -25,22 +24,32 @@ export type CartAction =
     | { type: "clear" };
 
 // SyncStatus: where the cart lives right now.
-// local: signed out (or pull failed) -- localStorage is the cart.
-// syncing: talking to the server (pull on sign-in, or pushing a change).
+// local: signed out (or sync unavailable) -- localStorage is the cart.
+// syncing: talking to the server (pull, push, or refetch).
 // synced: server and local agree. error: last server call failed; local still works.
 export type SyncStatus = "local" | "syncing" | "synced" | "error";
 
 const STORAGE_KEY = "ade-cart";
+// SYNCED_KEY: the last cart both sides agreed on, per user. This is what makes
+// refresh safe: when local equals this snapshot, local is just a cache of the
+// server cart (NOT new guest items), so a pull must adopt the server, not merge.
+const SYNCED_KEY = "ade-cart-synced";
 
 // PUSH_DELAY_MS: wait this long after the last cart change before pushing,
 // so rapid taps (quantity + +) send one PUT, not three.
 const PUSH_DELAY_MS = 600;
+
+// REFETCH_MS: while signed in and the tab is visible, re-read the server cart
+// this often so removals/edits from another device appear without a refresh.
+const REFETCH_MS = 30_000;
 
 // MAX_QUANTITY: per-line cap, matching the backend's cap.
 const MAX_QUANTITY = 99;
 
 const isSameLine = (item: CartItem, productId: string, size: string) =>
     item.productId === productId && item.size === size;
+
+const lineKey = (item: CartItem) => `${item.productId}::${item.size}`;
 
 function cartReducer(items: CartItem[], action: CartAction): CartItem[] {
     switch (action.type) {
@@ -97,29 +106,68 @@ function loadCart(): CartItem[] {
     }
 }
 
-// mergeCarts: union of the guest cart and the server cart, summing quantities
-// of matching (productId, size) lines and capping at MAX_QUANTITY.
-function mergeCarts(local: CartItem[], remote: CartItem[]): CartItem[] {
-    const merged: CartItem[] = remote.map((item) => ({ ...item }));
-    for (const item of local) {
-        const existing = merged.find((line) => isSameLine(line, item.productId, item.size));
-        if (existing) {
-            existing.quantity = Math.min(existing.quantity + item.quantity, MAX_QUANTITY);
-        } else {
-            merged.push({ ...item, quantity: Math.min(item.quantity, MAX_QUANTITY) });
-        }
-    }
-    return merged;
+// SyncedSnapshot: the last cart both sides agreed on, plus whose it was.
+// userId matters: a snapshot from user A must never be the merge base for user B.
+interface SyncedSnapshot {
+    userId: string | null;
+    items: CartItem[];
 }
 
-// sameCart: order-insensitive equality check, so we can skip a redundant push
-// when the merged cart already equals what the server has.
+function loadSynced(): SyncedSnapshot {
+    try {
+        const stored = localStorage.getItem(SYNCED_KEY);
+        if (!stored) return { userId: null, items: [] };
+        const parsed: unknown = JSON.parse(stored);
+        if (typeof parsed !== "object" || parsed === null) return { userId: null, items: [] };
+        const snapshot = parsed as { userId?: unknown; items?: unknown };
+        return {
+            userId: typeof snapshot.userId === "string" ? snapshot.userId : null,
+            items: Array.isArray(snapshot.items) ? snapshot.items.filter(isCartItem) : [],
+        };
+    } catch {
+        return { userId: null, items: [] };
+    }
+}
+
+// sameCart: order-insensitive equality check over full lines (id + size + quantity).
 function sameCart(a: CartItem[], b: CartItem[]): boolean {
     if (a.length !== b.length) return false;
-    const key = (item: CartItem) => `${item.productId}::${item.size}::${item.quantity}`;
+    const key = (item: CartItem) => `${lineKey(item)}::${item.quantity}`;
     const sortedA = a.map(key).sort();
     const sortedB = b.map(key).sort();
     return sortedA.every((value, index) => value === sortedB[index]);
+}
+
+// mergeCarts: three-way merge of local edits onto the server cart.
+// local: what this device shows. remote: what the server just returned.
+// base: the last snapshot both sides agreed on (the merge base).
+// - Lines unchanged locally (same qty as base, or absent from base and local):
+//   defer to the server (adopts other-device edits AND other-device removals).
+// - Lines added or re-quantitied locally: local wins.
+// - Lines in base but missing locally: deleted on this device while offline -> stay deleted.
+function mergeCarts(local: CartItem[], remote: CartItem[], base: CartItem[]): CartItem[] {
+    const merged = new Map<string, CartItem>();
+    for (const item of remote) merged.set(lineKey(item), { ...item });
+    const baseByKey = new Map<string, CartItem>();
+    for (const item of base) baseByKey.set(lineKey(item), item);
+
+    for (const item of local) {
+        const key = lineKey(item);
+        const prev = baseByKey.get(key);
+        if (prev && prev.quantity === item.quantity) {
+            // Untouched on this device: the server version (or its absence) wins.
+            continue;
+        }
+        // Added here, or re-quantitied here while offline: local wins.
+        merged.set(key, { ...item, quantity: Math.min(item.quantity, MAX_QUANTITY) });
+    }
+
+    const localKeys = new Set(local.map(lineKey));
+    for (const item of base) {
+        // In the agreed snapshot but gone locally: deleted on this device -> keep it gone.
+        if (!localKeys.has(lineKey(item))) merged.delete(lineKey(item));
+    }
+    return [...merged.values()];
 }
 
 interface CartContextValue {
@@ -140,12 +188,29 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // itemsRef: always the latest items for use inside async callbacks.
     const itemsRef = useRef(items);
     itemsRef.current = items;
+    // syncedRef: the last server-agreed snapshot (mirror of SYNCED_KEY).
+    const syncedRef = useRef<SyncedSnapshot>(loadSynced());
     // pulledFor: which user's cart we already pulled (StrictMode mounts twice; pull once per user).
     const pulledFor = useRef<string | null>(null);
     // pushTimer: the pending debounced push, cleared on every new change.
     const pushTimer = useRef<number | undefined>(undefined);
-    // skipPush: set when a replace came from the server path itself, so it isn't echoed back.
-    const skipPush = useRef(false);
+    // pushingRef: a PUT is in flight; refetches wait so they can't overwrite it.
+    const pushingRef = useRef(false);
+
+    // baseFor: the merge base for this user (another user's snapshot is not ours).
+    const baseFor = (uid: string): CartItem[] =>
+        syncedRef.current.userId === uid ? syncedRef.current.items : [];
+    // isDirty: local differs from the last agreed snapshot, so the server needs us (or vice versa).
+    const isDirty = (uid: string): boolean => !sameCart(itemsRef.current, baseFor(uid));
+
+    const saveSynced = (uid: string, snapshot: CartItem[]) => {
+        syncedRef.current = { userId: uid, items: snapshot.map((item) => ({ ...item })) };
+        try {
+            localStorage.setItem(SYNCED_KEY, JSON.stringify(syncedRef.current));
+        } catch {
+            // Storage blocked; the in-memory snapshot still guards this session.
+        }
+    };
 
     // Persist the guest cart + offline cache on every change (signed in or not).
     useEffect(() => {
@@ -156,8 +221,65 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, [items]);
 
-    // Pull on sign-in: fetch the server cart, merge the guest cart into it,
-    // show the merged cart, and push the merged cart up when the guest added anything.
+    // pushNow: PUT the given lines as the whole server cart. On success the
+    // snapshot advances to what was sent; local edits made mid-flight keep us
+    // dirty, so the push effect sends them next.
+    const pushNow = async (lines: CartItem[], uid: string): Promise<void> => {
+        if (pushingRef.current) return;
+        // The account changed while debouncing (sign-out, or a different sign-in):
+        // never PUT one user's cart under another user's token.
+        if (pulledFor.current !== uid) return;
+        pushingRef.current = true;
+        try {
+            await replaceRemoteCart(lines);
+            saveSynced(uid, lines);
+            setSyncStatus(isDirty(uid) ? "syncing" : "synced");
+        } catch {
+            // Offline/server down: localStorage already has the cart; the next
+            // change or refetch retries.
+            setSyncStatus("error");
+        } finally {
+            pushingRef.current = false;
+        }
+    };
+    // pushNowRef: stable handle for intervals/listeners defined in other effects.
+    const pushNowRef = useRef(pushNow);
+    pushNowRef.current = pushNow;
+
+    // syncFromServer: reconcile with the server cart.
+    // Clean local (just a cache of an older server state, e.g. after refresh):
+    // adopt the server cart. Dirty local (guest/offline edits): three-way merge,
+    // show it, and upload it so every other device sees it.
+    // Stale-run guard: if the user signed out (or into another account) while the
+    // fetch was in flight, pulledFor no longer matches, so never touch state.
+    const syncFromServer = async (uid: string): Promise<void> => {
+        if (pushingRef.current) return;
+        setSyncStatus("syncing");
+        try {
+            const remote = await fetchRemoteCart();
+            if (pulledFor.current !== uid) return;
+            const local = itemsRef.current;
+            const base = baseFor(uid);
+            if (sameCart(local, base)) {
+                if (!sameCart(local, remote)) dispatch({ type: "replace", items: remote });
+                saveSynced(uid, remote);
+                setSyncStatus("synced");
+                return;
+            }
+            const merged = mergeCarts(local, remote, base);
+            if (!sameCart(merged, local)) dispatch({ type: "replace", items: merged });
+            // Upload even when merged equals local: no items change fires then,
+            // so the push effect below would never run.
+            await pushNowRef.current(merged, uid);
+        } catch {
+            setSyncStatus("error");
+        }
+    };
+    // syncFromServerRef: stable handle for intervals/listeners.
+    const syncFromServerRef = useRef(syncFromServer);
+    syncFromServerRef.current = syncFromServer;
+
+    // Pull on sign-in: reconcile once per user; the local cart stays as-is for guests.
     useEffect(() => {
         // Signed out: reset for the next sign-in; the local cart stays as-is.
         if (!userId) {
@@ -170,72 +292,50 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (pulledFor.current === userId) return;
         pulledFor.current = userId;
 
-        let cancelled = false;
-        setSyncStatus("syncing");
-        (async () => {
-            try {
-                const remote = await fetchRemoteCart();
-                if (cancelled) return;
-                const merged = mergeCarts(itemsRef.current, remote);
-                if (sameCart(merged, remote) && sameCart(merged, itemsRef.current)) {
-                    // Local and server already agree: nothing to show or push.
-                    setSyncStatus("synced");
-                    return;
-                }
-                if (sameCart(merged, remote)) {
-                    // Local added nothing new: show the server cart without echoing it back.
-                    skipPush.current = true;
-                    dispatch({ type: "replace", items: merged });
-                    setSyncStatus("synced");
-                    return;
-                }
-                // The guest cart had items: show the merged cart; the push effect below
-                // uploads it (this dispatch is NOT skipped, deliberately).
-                dispatch({ type: "replace", items: merged });
-                setSyncStatus("syncing");
-            } catch (error) {
-                // Offline or 401: keep the local cart working; retry on the next change.
-                // A 401 here means the token didn't verify; AuthProvider owns the session itself.
-                if (!isAxiosError(error) || error.response?.status !== 401) {
-                    if (!cancelled) setSyncStatus("error");
-                } else if (!cancelled) {
-                    setSyncStatus("local");
-                }
-            }
-        })();
-        return () => {
-            cancelled = true;
-        };
-        // userId only: the pull runs once per sign-in; items come via itemsRef.
+        // One reconcile per sign-in; cart state flows through refs inside.
+        void syncFromServerRef.current(userId);
+        // userId only: the pull runs once per sign-in; cart state comes via refs.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userId]);
 
-    // Push while signed in: debounced PUT of the whole cart after every change
+    // Push while signed in: debounced PUT after every UNSYNCED change
     // (add, remove, quantity, clear -- including checkout's clear after success).
+    // Server-adopted replaces leave us clean, so they never echo back.
     useEffect(() => {
         // Guests never push; and don't push before the sign-in pull ran.
         if (!userId || pulledFor.current !== userId) return;
-        // This change came from the server path itself: consume the flag, don't echo.
-        if (skipPush.current) {
-            skipPush.current = false;
-            return;
-        }
+        // Clean (e.g. just adopted the server cart): nothing to send.
+        if (!isDirty(userId)) return;
         setSyncStatus("syncing");
         window.clearTimeout(pushTimer.current);
         pushTimer.current = window.setTimeout(() => {
-            (async () => {
-                try {
-                    await replaceRemoteCart(itemsRef.current);
-                    setSyncStatus("synced");
-                } catch {
-                    // Offline/server down: localStorage already has the cart; retry on next change.
-                    setSyncStatus("error");
-                }
-            })();
+            void pushNowRef.current(itemsRef.current, userId);
         }, PUSH_DELAY_MS);
         return () => window.clearTimeout(pushTimer.current);
         // items + userId: every cart change for the current user schedules a push.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [items, userId]);
+
+    // Refetch while signed in: on window focus and every REFETCH_MS (visible tab
+    // only), so removals/edits from another device appear without a manual refresh.
+    // syncFromServer merges when dirty, so in-progress local edits are never lost.
+    useEffect(() => {
+        if (!userId) return;
+        const uid = userId;
+        const refetch = () => {
+            if (document.hidden) return;
+            if (pulledFor.current !== uid) return;
+            void syncFromServerRef.current(uid);
+        };
+        window.addEventListener("focus", refetch);
+        document.addEventListener("visibilitychange", refetch);
+        const id = window.setInterval(refetch, REFETCH_MS);
+        return () => {
+            window.removeEventListener("focus", refetch);
+            document.removeEventListener("visibilitychange", refetch);
+            window.clearInterval(id);
+        };
+    }, [userId]);
 
     return <CartContext value={{ items, dispatch, syncStatus }}>{children}</CartContext>;
 }
